@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/lip_videos/videos/
+data/lip_videos/audio/
+download_history.json
+logs/
+test_results/
+visualization_samples/
+cropped_samples/
+models/pretrain/
+models/finetune/
+
+# Large data folders (too big for GitHub)
+009.립리딩(입모양) 음성인식 데이터/
+009.립리딩(입모양) 음성인식 데이터/
+
+# Temporary files
+*.tmp
+*.temp
+temp_preview_*.mp4
+
+# Large files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.m4a
+*.wav
+
+# Database
+*.db
+*.sqlite
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local 
