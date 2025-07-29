@@ -18,6 +18,7 @@ import re
 import hashlib
 from PIL import Image
 import io
+import random
 
 
 # 뉴스 전용 검색어 목록
@@ -41,34 +42,55 @@ MASS_COLLECTION_QUERIES = [
     
     # 기본 입술 관련
     "입술", "입모양", "입술 움직임", "입술 발음",
+    "입술 교정", "입모양 교정", "입술 훈련",
     
     # 한국어 발음 관련
     "한국어 발음", "한국어 말하기", "한국어 발음 연습",
     "한국어 자음", "한국어 모음", "한국어 받침",
+    "한국어 발음교정", "한국어 발음연습", "한국어 발음훈련",
+    
+    # 영어 발음 관련
+    "영어 발음", "영어 말하기", "영어 발음 연습",
+    "영어 발음교정", "영어 발음연습", "영어 발음훈련",
+    "영어 자음", "영어 모음", "영어 받침",
+    
+    # 발음 교정 관련
+    "발음교정", "발음연습", "발음훈련", "발음기법",
+    "말하기교정", "말하기연습", "말하기훈련", "말하기기법",
+    "발음교정법", "발음연습법", "발음훈련법",
     
     # 상황별 말하기
     "강의 발음", "강사 발음", "교사 발음",
-    "인터뷰 발음", "토크쇼 발음",
+    "인터뷰 발음", "토크쇼 발음", "방송 발음",
+    "강의 말하기", "강사 말하기", "교사 말하기",
     
     # 연령대별
     "어린이 발음", "아이 발음", "유아 발음",
-    "청소년 발음", "학생 발음",
-    "성인 발음", "어른 발음",
-    "노인 발음", "어르신 발음",
+    "청소년 발음", "학생 발음", "어린이 말하기",
+    "성인 발음", "어른 발음", "성인 말하기",
+    "노인 발음", "어르신 발음", "노인 말하기",
     
     # 전문 분야
     "강사 발음", "선생님 발음", "교수 발음",
     "연기 발음", "배우 발음", "연극 발음",
+    "아나운서 발음", "MC 발음", "진행자 발음",
     
     # 특정 상황
     "발표 발음", "스피치 발음", "연설 발음",
     "독서 발음", "책 읽기", "낭독",
     "노래 발음", "가수 발음", "보컬 발음",
+    "발표 말하기", "스피치 말하기", "연설 말하기",
     
     # 기술적 키워드
     "음성인식", "음성처리", "음성분석",
     "입모양 인식", "입술 인식", "립리딩",
-    "컴퓨터 비전", "얼굴 인식", "표정 인식"
+    "컴퓨터 비전", "얼굴 인식", "표정 인식",
+    "입모양 분석", "입술 분석", "입모양 처리",
+    
+    # 추가 키워드
+    "발음교정영상", "입모양교정", "발음연습영상",
+    "말하기연습영상", "발음훈련영상", "입술운동영상",
+    "발음기법영상", "말하기기법영상", "발음교정법영상"
 ]
 
 
@@ -299,6 +321,7 @@ class LipVideoCrawler:
                     'max_downloads': 20,
                     'progress_hooks': [self.download_progress_hook],
                     'concurrent_fragment_downloads': 4,
+                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-movflags', '+faststart'],
                     'ignoreerrors': True,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'referer': 'https://www.youtube.com/',
@@ -334,6 +357,7 @@ class LipVideoCrawler:
                     'http_chunk_size': 41943040,
                     'max_downloads': 10,
                     'progress_hooks': [self.download_progress_hook],
+                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-movflags', '+faststart'],
                     'ignoreerrors': True,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'referer': 'https://www.youtube.com/',
@@ -379,7 +403,7 @@ class LipVideoCrawler:
                     'writesubtitles': False,
                     'writeautomaticsub': False,
                     'merge_output_format': 'mp4',
-                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18'],
+                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-movflags', '+faststart'],
                     
                     # 1080p 미만은 에러로 처리
                     'ignoreerrors': True,
@@ -403,7 +427,7 @@ class LipVideoCrawler:
                     'max_downloads': 10,
                     'progress_hooks': [self.download_progress_hook],
                     'merge_output_format': 'mp4',
-                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20'],
+                    'postprocessor_args': ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-movflags', '+faststart'],
                     'ignoreerrors': True,
                     'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'referer': 'https://www.youtube.com/',
@@ -436,11 +460,75 @@ class LipVideoCrawler:
     
     def sanitize_filename(self, title):
         """파일명 정리"""
+        # 특수문자 제거 (더 강력하게)
         sanitized = re.sub(r'[<>:"/\\|?*]', '', title)
+        # 슬래시를 언더스코어로 변경
+        sanitized = sanitized.replace('/', '_').replace('\\', '_')
+        # 공백을 언더스코어로 변경
         sanitized = re.sub(r'\s+', '_', sanitized)
+        # 길이 제한
         if len(sanitized) > 100:
             sanitized = sanitized[:100]
         return sanitized
+    
+    def is_video_already_downloaded(self, video_info):
+        """파일 시스템에서 이미 다운로드된 비디오인지 확인"""
+        try:
+            # 파일명 생성
+            safe_title = self.sanitize_filename(video_info['title'])
+            original_title = video_info['title'].lower()
+            
+            # 통합 다운로드 모드 체크
+            if not hasattr(self, 'video_dir'):
+                # videos 폴더에서 체크
+                for ext in ['*.mp4', '*.mkv', '*.avi', '*.mov']:
+                    for file_path in self.output_dir.glob(ext):
+                        file_name = file_path.name.lower()
+                        
+                        # 1. 정확한 제목 매칭
+                        if safe_title.lower() in file_name:
+                            print(f"⚠️  이미 존재하는 파일 발견 (정확 매칭): {file_path.name}")
+                            return True
+                        
+                        # 2. 원본 제목 매칭 (특수문자 처리)
+                        if original_title in file_name:
+                            print(f"⚠️  이미 존재하는 파일 발견 (원본 매칭): {file_path.name}")
+                            return True
+                        
+                        # 3. 키워드 매칭 (주요 단어들)
+                        title_words = original_title.split()
+                        file_words = file_name.replace('.mp4', '').split()
+                        
+                        # 공통 키워드가 3개 이상이면 중복으로 판단
+                        common_words = set(title_words) & set(file_words)
+                        if len(common_words) >= 3:
+                            print(f"⚠️  이미 존재하는 파일 발견 (키워드 매칭): {file_path.name}")
+                            return True
+            else:
+                # 분리 다운로드 모드 체크
+                # 비디오 파일 체크
+                for ext in ['*.mp4', '*.mkv', '*.avi', '*.mov']:
+                    for file_path in self.video_dir.glob(ext):
+                        file_name = file_path.name.lower()
+                        
+                        if safe_title.lower() in file_name or original_title in file_name:
+                            print(f"⚠️  이미 존재하는 비디오 파일: {file_path.name}")
+                            return True
+                
+                # 오디오 파일 체크
+                for ext in ['*.m4a', '*.mp3', '*.wav', '*.aac']:
+                    for file_path in self.audio_dir.glob(ext):
+                        file_name = file_path.name.lower()
+                        
+                        if safe_title.lower() in file_name or original_title in file_name:
+                            print(f"⚠️  이미 존재하는 오디오 파일: {file_path.name}")
+                            return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"❌ 파일 체크 오류: {e}")
+            return False
     
     def search_youtube_videos(self, query, max_results=10):
         """YouTube 비디오 검색 (CC-BY 전용)"""
@@ -469,8 +557,8 @@ class LipVideoCrawler:
                             'view_count': entry.get('view_count', 0),
                         }
                         
-                        # 이미 다운로드한 비디오는 제외
-                        if video_info['id'] not in self.downloaded_videos:
+                        # 이미 다운로드한 비디오는 제외 (히스토리 + 파일 시스템 체크)
+                        if video_info['id'] not in self.downloaded_videos and not self.is_video_already_downloaded(video_info):
                             videos.append(video_info)
                 
                 print(f"📊 검색 결과: {len(videos)}개 비디오 (CC-BY 필터 적용)")
@@ -519,7 +607,7 @@ class LipVideoCrawler:
                             
                             # 중복 제거 (ID 기준)
                             if video_info['id'] not in [v['id'] for v in all_videos]:
-                                if video_info['id'] not in self.downloaded_videos:
+                                if video_info['id'] not in self.downloaded_videos and not self.is_video_already_downloaded(video_info):
                                     all_videos.append(video_info)
                                     
             except Exception as e:
@@ -789,25 +877,65 @@ class LipVideoCrawler:
         
         # 검색 실행
         if cc_only_mode:
-            videos = self.search_cc_only_videos(query, max_videos * 3)
+            videos = self.search_cc_only_videos(query, max_videos * 3)  # 더 많은 후보 검색
         else:
-            videos = self.search_youtube_videos(query, max_videos * 3)
+            videos = self.search_youtube_videos(query, max_videos * 3)  # 더 많은 후보 검색
         
         if not videos:
             print("❌ 검색 결과가 없습니다.")
             return
         
-        # 다운로드 실행
+        # 중복 제거 및 필터링
+        unique_videos = []
+        seen_ids = set()
+        
+        for video in videos:
+            if video['id'] not in seen_ids:
+                seen_ids.add(video['id'])
+                unique_videos.append(video)
+        
+        print(f"📊 중복 제거 후: {len(unique_videos)}개 비디오")
+        
         successful_downloads = 0
-        for i, video_info in enumerate(videos, 1):
-            print(f"\n[{i}/{len(videos)}] {video_info['title']}")
+        processed_count = 0
+        
+        for i, video_info in enumerate(unique_videos, 1):
+            processed_count += 1
+            print(f"\n📹 [{processed_count}/{len(unique_videos)}] 처리 중: {video_info['title']}")
             
+            # 이미 다운로드된 비디오인지 확인
+            if video_info['id'] in self.downloaded_videos:
+                print("⚠️  이미 다운로드된 비디오입니다. 건너뜁니다.")
+                continue
+            
+            if self.is_video_already_downloaded(video_info):
+                print("⚠️  파일 시스템에서 이미 존재하는 비디오입니다. 건너뜁니다.")
+                continue
+            else:
+                print(f"🔍 파일 체크 완료: '{video_info['title']}' - 새로운 비디오")
+            
+            # 라이선스 확인
+            if not self.check_license(video_info):
+                print("❌ CC-BY 라이선스가 아닙니다. 건너뜁니다.")
+                continue
+            
+            # 비디오 품질 확인
+            if not self.check_video_quality(video_info):
+                print("❌ 비디오 품질이 기준에 맞지 않습니다. 건너뜁니다.")
+                continue
+            
+            # 다운로드 실행
             if self.download_with_retry(video_info['url'], video_info):
                 successful_downloads += 1
+                print(f"✅ 다운로드 성공! ({successful_downloads}/{max_videos})")
+                
+                # 목표 달성 시 중단
                 if successful_downloads >= max_videos:
                     break
+            else:
+                print("❌ 다운로드 실패")
         
-        print(f"\n✅ 크롤링 완료: {successful_downloads}개 다운로드")
+        print(f"\n🎉 크롤링 완료! 성공: {successful_downloads}/{max_videos}")
 
     def validate_existing_files(self):
         """기존 파일들을 검증하여 입술이 없는 파일 삭제"""
@@ -883,6 +1011,11 @@ def run_mass_collection(queries=None, max_videos_per_query=3, output_dir="data/l
                 continue
                 
             successful_downloads = 0
+            
+            # 비디오 목록을 랜덤으로 섞기
+            random.shuffle(videos[:max_videos_per_query * 2])
+            print(f"🎲 랜덤 순서로 다운로드 시작...")
+            
             for j, video_info in enumerate(videos[:max_videos_per_query * 2], 1):
                 print(f"  [{j}/{len(videos[:max_videos_per_query * 2])}] {video_info['title']}")
                 if crawler.download_with_retry(video_info['url'], video_info):
@@ -949,6 +1082,11 @@ def run_news_collection(max_videos_per_query=3, output_dir="data/lip_videos", de
                 continue
                 
             successful_downloads = 0
+            
+            # 비디오 목록을 랜덤으로 섞기
+            random.shuffle(videos[:max_videos_per_query * 2])
+            print(f"🎲 랜덤 순서로 다운로드 시작...")
+            
             for j, video_info in enumerate(videos[:max_videos_per_query * 2], 1):
                 print(f"  [{j}/{len(videos[:max_videos_per_query * 2])}] {video_info['title']}")
                 if crawler.download_with_retry(video_info['url'], video_info):

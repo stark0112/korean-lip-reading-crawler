@@ -94,7 +94,7 @@ class AutoRestartCrawler:
 
 def main():
     parser = argparse.ArgumentParser(description="자동 재시작 크롤러")
-    parser.add_argument("--max-restarts", type=int, default=10, 
+    parser.add_argument("--max-restarts", type=int, default=1000, 
                        help="최대 재시작 횟수 (기본값: 10)")
     parser.add_argument("--restart-delay", type=int, default=30, 
                        help="재시작 대기 시간(초) (기본값: 30)")
